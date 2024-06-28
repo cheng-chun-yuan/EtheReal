@@ -29,13 +29,18 @@ contract EtheReal is Ownable {
     IhouseAsset public houseAsset;
     uint256 public duration = 30 days;
 
+    mapping(uint256 => mapping (uint256 => address)) public rentAddressMonth;
+
     mapping(uint256 => StakeInfo) public stakes;
     mapping(uint256 => uint256) public houseOwnerClaimedAmount;
     mapping(uint256 => uint256) public houseInvestorClaimedAmount;
     mapping(uint256 => uint256) public minAmount;
 
+    mapping(uint256 => address) public defaultRentAddress;
+
     event TokensPurchased(address indexed buyer, uint256 amount);
     event NFTStaked(address indexed staker, uint256 tokenId, uint256 duration);
+    event RentHouse(address indexed renter, uint256 tokenId, uint256 months);
 
     constructor(address _houseAsset) Ownable(msg.sender) {
         houseAsset = IhouseAsset(_houseAsset);
@@ -58,7 +63,7 @@ contract EtheReal is Ownable {
             totalSupply: totalSupply,
             currentSupply: 0,
             startTime: startTime,
-            endTime: endTime 
+            endTime: endTime
         });
         minAmount[tokenId] = _minAmount;
         emit NFTStaked(msg.sender, tokenId, duration);
@@ -106,11 +111,19 @@ contract EtheReal is Ownable {
         payable(msg.sender).transfer(balance);
     }
 
-    //TODO : add timelock no different people to rent, out of range
     function rentHouse( uint256 tokenId, uint256 months ) public payable {
-        uint256 price = stakes[tokenId].rentPricePerMonth * months;
+        require(rentAddressMonth[tokenId][months] == address(0), "Already rented");
+        uint256 price = stakes[tokenId].rentPricePerMonth;
         require(msg.value == price, "Incorrect ether value sent");
         houseInvestorClaimedAmount[tokenId] += price;
+        rentAddressMonth[tokenId][months] = msg.sender;
+        emit RentHouse(msg.sender, tokenId, months);
+    }
+
+    function rentHouses( uint256 tokenId, uint256[] memory months ) public payable {
+        for (uint256 i = 0; i < months.length; i++) {
+            rentHouse(tokenId, months[i]);
+        }
     }
 
     // Function to receive Ether. msg.data must be empty

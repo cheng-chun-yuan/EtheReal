@@ -11,7 +11,6 @@ contract Deploy is BaseScript {
     function run() public broadcast returns (EtheReal etheReal, HouseAsset nft) {
         nft = new HouseAsset();
         etheReal = new EtheReal(address(nft));
-
         return (etheReal, nft);
     }
 }
